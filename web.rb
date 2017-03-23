@@ -25,110 +25,115 @@
 #
 # Version 1.0: 03/11/2011
 # Version 2.0: 03/02/2012 - web user interface
+# Version 3.0: 22/03/2017 - Improvements
 
 require 'sinatra'
 require 'odf-report'
 require 'spreadsheet'
 require 'ods'
 
-UPLOAD_PATH = 'public/uploads'
+class GeradorCertificados < Sinatra::Base
 
-get '/' do
-  @errors = []
-  erb :index
-end
+  UPLOAD_PATH = 'public/uploads'
 
-get '/ajuda' do
-  erb :ajuda
-end
-
-post '/' do
-  @errors = []
-  validate(params)
-  if @errors.empty?
-    vars = params[:variaveis].split
-    name = params[:nome].empty? ? 'certificados' : params[:nome]
-    model = upload(params[:modelo], 'modelo.odt')
-
-    data_mime = params[:dados][:type] =~ /ms-excel/ ? 'xls' : 'ods'
-    data = upload(params[:dados], "dados.#{data_mime}")
-
-    file = generate(vars, model, data)
-    send_file file, :filename => "#{name}.odt"
-  else
+  get '/' do
+    @errors = []
     erb :index
   end
-end
 
-get '/modelo-exemplo.odt' do
-  send_file 'public/exemplos/modelo.odt'
-end
-
-get '/dados-exemplo.xls' do
-  send_file 'public/exemplos/dados.xls'
-end
-
-def validate params
-  if params[:modelo]
-    @errors << 'O item Modelo tem que ser um arquivo odt' if not params[:modelo][:type] =~ /opendocument.text/
-  else
-    @errors << 'O item Modelo não pode ser vazio'
+  get '/ajuda' do
+    erb :ajuda
   end
 
-  if params[:dados]
-    @errors << 'O item Dados tem que ser um arquivo xls ou ods' if not params[:dados][:type] =~ /ms-excel|opendocument.spreadsheet/
-  else
-    @errors << 'O item Dados não pode ser vazio'
+  post '/' do
+    @errors = []
+    validate(params)
+    if @errors.empty?
+      vars = params[:variaveis].split
+      name = params[:nome].empty? ? 'certificados' : params[:nome]
+      model = upload(params[:modelo], 'modelo.odt')
+
+      data_mime = params[:dados][:type] =~ /ms-excel/ ? 'xls' : 'ods'
+      data = upload(params[:dados], "dados.#{data_mime}")
+
+      file = generate(vars, model, data)
+      send_file file, :filename => "#{name}.odt"
+    else
+      erb :index
+    end
   end
 
-  @errors << 'O item Variáveis não pode ser vazio' if params[:variaveis] and params[:variaveis].empty?
-end
-
-def upload multipart, filename
-  file_path = File.join(UPLOAD_PATH, filename)
-
-  File.open(file_path, "w") do |f|
-    f.write(multipart[:tempfile].read)
+  get '/modelo-exemplo.odt' do
+    send_file 'public/exemplos/modelo.odt'
   end
 
-  return file_path
-end
+  get '/dados-exemplo.xls' do
+    send_file 'public/exemplos/dados.xls'
+  end
 
-def generate(vars, model, data)
-  file = 'public/output/certificados.odt'
+  def validate params
+    if params[:modelo]
+      @errors << 'O item Modelo tem que ser um arquivo odt' if not params[:modelo][:type] =~ /opendocument.text/
+    else
+      @errors << 'O item Modelo não pode ser vazio'
+    end
 
-  Spreadsheet.client_encoding = 'UTF-8'
+    if params[:dados]
+      @errors << 'O item Dados tem que ser um arquivo xls ou ods' if not params[:dados][:type] =~ /ms-excel|opendocument.spreadsheet/
+    else
+      @errors << 'O item Dados não pode ser vazio'
+    end
 
-  rows = data_rows(data)
+    @errors << 'O item Variáveis não pode ser vazio' if params[:variaveis] and params[:variaveis].empty?
+  end
 
-  report = ODFReport::Report.new(model) do |r|
-    r.add_section('CERTIFICADOS', rows) do |s|
-      vars.each_with_index do |field, i|
-        s.add_field(field.upcase) { |row| "#{row[i]}" }
+  def upload multipart, filename
+    file_path = File.join(UPLOAD_PATH, filename)
+
+    File.open(file_path, "w") do |f|
+      f.write(multipart[:tempfile].read)
+    end
+
+    return file_path
+  end
+
+  def generate(vars, model, data)
+    file = 'public/output/certificados.odt'
+
+    Spreadsheet.client_encoding = 'UTF-8'
+
+    rows = data_rows(data)
+
+    report = ODFReport::Report.new(model) do |r|
+      r.add_section('CERTIFICADOS', rows) do |s|
+        vars.each_with_index do |field, i|
+          s.add_field(field.upcase) { |row| "#{row[i]}" }
+        end
       end
     end
+
+    report.generate(file)
+    return file
   end
 
-  report.generate(file)
-  return file
-end
-
-def data_rows(data_path)
-  puts data_path
-  if data_path.end_with? '.xls'
-    Spreadsheet.client_encoding = 'UTF-8'
-    table = Spreadsheet.open(data_path).worksheets[0]
-    rows = []; table.each { |row| rows << row }
-    return rows
-  else
-    ods = Ods.new(data_path)
-    sheet = ods.sheets[0]
-    _rows = []
-    sheet.rows.each do |row|
-      _row = []
-      row.cols.each { |cell| _row << cell.value }
-      _rows << _row
+  def data_rows(data_path)
+    puts data_path
+    if data_path.end_with? '.xls'
+      Spreadsheet.client_encoding = 'UTF-8'
+      table = Spreadsheet.open(data_path).worksheets[0]
+      rows = []; table.each { |row| rows << row }
+      return rows
+    else
+      ods = Ods.new(data_path)
+      sheet = ods.sheets[0]
+      _rows = []
+      sheet.rows.each do |row|
+        _row = []
+        row.cols.each { |cell| _row << cell.value }
+        _rows << _row
+      end
+      return _rows
     end
-    return _rows
   end
+
 end

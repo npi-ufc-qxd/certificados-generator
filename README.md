@@ -1,4 +1,4 @@
-# Certificados generator
+# Gerador de Certificados
 
 Uma aplicação web para gerar certificados baseados em um modelo *odt* (texto do
 [LibreOffice][1]) pegando os dados de um arquivo *ods* (tabela do
@@ -6,15 +6,12 @@ Uma aplicação web para gerar certificados baseados em um modelo *odt* (texto d
 
 Acesse a aplicação: http://certificado.heroku.com/
 
-## Utilização
-
-http://certificado.heroku.com/ajuda
 
 ## Licença
 
 The MIT License
 
-Copyright (c) 2012 Hugo Henriques Maia Vieira
+Copyright (c) 2017 originalmente desenvolvido por Hugo Henriques Maia Vieira, melhorado por NPI Quixadá
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to

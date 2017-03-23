@@ -3,3 +3,4 @@ public/output/*
 !public/output/.gitkeep
 public/uploads/*
 #!public/uploads/.gitkeep
+.idea/
